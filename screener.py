@@ -1,6 +1,6 @@
 """
 Claude x יוסי — Stock Screener & Alert
-מסרוק מניות יומי עם התראה אוטומטית ל-Discord
+מסרוק מניות יומי עם התראה אוטומטית ל-Slack
 """
 
 import os
@@ -21,17 +21,40 @@ CONFIG = {
     "max_results":       15,
 }
 
+CONFIG_MAG7 = {
+    "min_volume_ratio":  1.2,
+    "rsi_min":           30,
+    "rsi_max":           70,
+    "min_price":         5,
+}
+
+MAG7 = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA"]
+
 WATCHLIST = [
+    # Tech / AI / Semiconductors
     "AMD", "INTC", "QCOM", "AVGO", "TSM", "ARM", "SMCI", "MRVL",
     "PLTR", "SNOW", "DDOG", "MDB", "CRWD", "ZS", "OKTA", "PANW",
     "UBER", "LYFT", "ABNB", "DASH", "RBLX", "U", "TTWO",
+    "ANET", "NET", "DKNG", "BILL", "GTLB", "PATH",
+    # Biotech
     "MRNA", "BNTX", "NVAX", "RXRX", "ILMN", "PACB", "TDOC",
+    "EXAS", "BEAM", "EDIT", "CRSP",
+    # Fintech
     "AFRM", "UPST", "NU", "HOOD", "COIN", "RIOT", "MARA",
+    "SOFI", "LC",
+    # EV / Clean Energy
     "RIVN", "LCID", "NIO", "LI", "XPEV", "CHPT", "BLNK", "PLUG",
+    "FCEL", "BE",
+    # Consumer / Social
     "CVNA", "CPNG", "W", "ETSY", "PINS", "SNAP", "RDDT",
+    # Space / Industrial
     "RKLB", "ASTS", "LUNR", "JOBY", "ACHR",
-    "APP", "TTGT", "HIMS", "RXST", "NKLA", "MSTR", "IONQ",
+    # Growth / Other
+    "APP", "TTGT", "HIMS", "RXST", "MSTR", "IONQ",
+    "CELH", "IMVT", "KROS", "GKOS", "PRCT",
 ]
+
+WATCHLIST = list(dict.fromkeys(WATCHLIST))
 
 def calculate_rsi(prices, period=14):
     if len(prices) < period + 1:
@@ -49,30 +72,31 @@ def calculate_rsi(prices, period=14):
     rs = avg_gain / avg_loss
     return round(100 - (100 / (1 + rs)), 1)
 
-def analyze_stock(symbol):
+def analyze_stock(symbol, config):
     try:
         ticker = yf.Ticker(symbol)
         info = ticker.info
         market_cap = info.get("marketCap", 0) or 0
         market_cap_b = market_cap / 1e9
-        if market_cap_b < CONFIG["min_market_cap_b"] or market_cap_b > CONFIG["max_market_cap_b"]:
-            return None
+        if "max_market_cap_b" in config:
+            if market_cap_b < config["min_market_cap_b"] or market_cap_b > config["max_market_cap_b"]:
+                return None
         price = info.get("currentPrice") or info.get("regularMarketPrice", 0)
-        if not price or price < CONFIG["min_price"]:
+        if not price or price < config["min_price"]:
             return None
         vol_today = info.get("volume", 0) or 0
         vol_avg = info.get("averageVolume", 0) or 0
         if vol_avg == 0:
             return None
         vol_ratio = vol_today / vol_avg
-        if vol_ratio < CONFIG["min_volume_ratio"]:
+        if vol_ratio < config["min_volume_ratio"]:
             return None
         hist = ticker.history(period="30d")
         if hist.empty or len(hist) < 15:
             return None
         closes = hist["Close"].tolist()
         rsi = calculate_rsi(closes)
-        if rsi is None or rsi < CONFIG["rsi_min"] or rsi > CONFIG["rsi_max"]:
+        if rsi is None or rsi < config["rsi_min"] or rsi > config["rsi_max"]:
             return None
         prev_close = info.get("previousClose", price)
         day_change_pct = ((price - prev_close) / prev_close * 100) if prev_close else 0
@@ -97,66 +121,92 @@ def analyze_stock(symbol):
         return None
 
 def run_screener():
+    # סריקת 7 המופלאים
+    print(f"\n⭐ סורק 7 המופלאים...")
+    mag7_results = []
+    for sym in MAG7:
+        sys.stdout.write(f"\r   {sym}...")
+        sys.stdout.flush()
+        result = analyze_stock(sym, CONFIG_MAG7)
+        if result:
+            mag7_results.append(result)
+        time.sleep(0.3)
+    print(f"\n   נמצאו {len(mag7_results)} מופלאים עם סיגנל\n")
+
+    # סריקת הרשימה הרגילה
     print(f"\n🔍 מתחיל סריקה של {len(WATCHLIST)} מניות...")
     results = []
     for i, sym in enumerate(WATCHLIST):
         sys.stdout.write(f"\r   סורק {i+1}/{len(WATCHLIST)}: {sym:<8}")
         sys.stdout.flush()
-        result = analyze_stock(sym)
+        result = analyze_stock(sym, CONFIG)
         if result:
             results.append(result)
         time.sleep(0.3)
     print(f"\n\n✅ נמצאו {len(results)} מניות\n")
     results.sort(key=lambda x: x["score"], reverse=True)
-    return results[:CONFIG["max_results"]]
+    return mag7_results, results[:CONFIG["max_results"]]
 
-def send_discord(stocks, scan_time):
-    webhook_url = os.environ.get("DISCORD_WEBHOOK")
+def send_notification(mag7_results, stocks, scan_time):
+    webhook_url = os.environ.get("SLACK_WEBHOOK")
     if not webhook_url:
-        print("⚠️  אין DISCORD_WEBHOOK — מדפיס תוצאות:")
-        for s in stocks:
-            print(f"   {s['symbol']:6} | ${s['price']:8.2f} | {s['day_change_pct']:+.1f}% | נפח {s['volume_ratio']}× | RSI {s['rsi']} | ציון {s['score']}/100")
+        print("⚠️  מדפיס תוצאות:")
+        if mag7_results:
+            print("\n⭐ 7 המופלאים:")
+            for s in mag7_results:
+                print(f"   {s['symbol']:6} | ${s['price']:8.2f} | {s['day_change_pct']:+.1f}% | נפח {s['volume_ratio']}× | RSI {s['rsi']} | ציון {s['score']}/100")
+        if stocks:
+            print("\n🔍 מניות נוספות:")
+            for s in stocks:
+                print(f"   {s['symbol']:6} | ${s['price']:8.2f} | {s['day_change_pct']:+.1f}% | נפח {s['volume_ratio']}× | RSI {s['rsi']} | ציון {s['score']}/100")
         return
 
-    # שלח הודעת כותרת
-    header = f"📊 **Claude × יוסי Screener** | {scan_time}\n🔍 נמצאו **{len(stocks)} מניות**:\n⚠️ רשימת מועמדים טכניים בלבד — לא המלצת קנייה!"
-    data = json.dumps({"content": header}).encode()
-    req = urllib.request.Request(webhook_url, data=data, headers={"Content-Type": "application/json"})
-    urllib.request.urlopen(req)
-    time.sleep(0.5)
-
-    if not stocks:
-        return
-
-    # שלח כל מניה
-    for s in stocks:
-        arrow = "🟢" if s['day_change_pct'] >= 0 else "🔴"
-        msg = (
-            f"{arrow} **{s['symbol']}** — {s['name']}\n"
-            f"💰 מחיר: **${s['price']}** ({s['day_change_pct']:+.2f}%)\n"
-            f"📈 נפח: **{s['volume_ratio']}×** מהממוצע\n"
-            f"📊 RSI: **{s['rsi']}**\n"
-            f"⭐ ציון: **{s['score']}/100**\n"
-        )
-        data = json.dumps({"content": msg}).encode()
+    def post(text):
+        data = json.dumps({"text": text}).encode()
         req = urllib.request.Request(webhook_url, data=data, headers={"Content-Type": "application/json"})
         try:
             urllib.request.urlopen(req)
             time.sleep(0.5)
         except Exception as e:
-            print(f"שגיאה בשליחת {s['symbol']}: {e}")
+            print(f"שגיאה: {e}")
 
-    print(f"✅ נשלח ל-Discord — {len(stocks)} מניות")
+    post(
+        f":bar_chart: *Claude x יוסי Screener* | {scan_time}\n"
+        f":star: מופלאים: *{len(mag7_results)}* | :mag: מניות: *{len(stocks)}*\n"
+        f":warning: מועמדים טכניים בלבד — לא המלצת קנייה!"
+    )
+
+    if mag7_results:
+        post("━━━━━━━━━━\n:star: *7 המופלאים — סיגנל היום:*")
+        for s in mag7_results:
+            arrow = ":large_green_circle:" if s['day_change_pct'] >= 0 else ":red_circle:"
+            post(
+                f"{arrow} *{s['symbol']}* — {s['name']}\n"
+                f":moneybag: *${s['price']}* ({s['day_change_pct']:+.2f}%) | נפח: *{s['volume_ratio']}x* | RSI: *{s['rsi']}*\n"
+                f":star: ציון: *{s['score']}/100*"
+            )
+
+    if stocks:
+        post("━━━━━━━━━━\n:mag: *מניות נוספות:*")
+        for s in stocks:
+            arrow = ":large_green_circle:" if s['day_change_pct'] >= 0 else ":red_circle:"
+            post(
+                f"{arrow} *{s['symbol']}* — {s['name']}\n"
+                f":moneybag: *${s['price']}* ({s['day_change_pct']:+.2f}%) | נפח: *{s['volume_ratio']}x* | RSI: *{s['rsi']}*\n"
+                f":star: ציון: *{s['score']}/100*"
+            )
+
+    print(f"✅ נשלח ל-Slack!")
 
 if __name__ == "__main__":
     print("╔══════════════════════════════════════════╗")
     print("║   Claude × יוסי — Stock Screener        ║")
     print("╚══════════════════════════════════════════╝")
     scan_time = datetime.now().strftime("%d/%m/%Y %H:%M")
-    stocks = run_screener()
-    if stocks:
+    mag7_results, stocks = run_screener()
+    if mag7_results or stocks:
         print("🏆 תוצאות מובילות:")
-        for s in stocks[:5]:
+        for s in (mag7_results + stocks)[:5]:
             print(f"   {s['symbol']:6} | ${s['price']:8.2f} | נפח {s['volume_ratio']}× | RSI {s['rsi']:5.1f} | ציון {s['score']}/100")
-    send_discord(stocks, scan_time)
+    send_notification(mag7_results, stocks, scan_time)
     print("\n✅ סיום.")
