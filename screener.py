@@ -175,8 +175,7 @@ def analyze_stock(symbol, session, config):
         score += min(abs(day_change_pct) * 3, 20)
         score += min(market_cap_b * 0.3, 8)
 
-        ma150_score, ma150_desc = get_ma150_signal(closes, price)
-        score += ma150_score
+        ma150_desc = "לא מחושב"
 
         analyst_score, analyst_rec = get_analyst_signal(info)
         score += analyst_score
