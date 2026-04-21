@@ -231,6 +231,7 @@ def run_screener():
 
 def send_slack(mag7_results, stocks, scan_time):
     webhook_url = os.environ.get("SLACK_WEBHOOK")
+    print(f"DEBUG: webhook_url = {webhook_url}")
     if not webhook_url:
         print("אין Webhook URL")
         for s in mag7_results + stocks:
