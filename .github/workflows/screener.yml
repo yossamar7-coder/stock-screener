@@ -14,4 +14,6 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install yfinance requests
-      - run: python screener.py
+      - env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: python screener.py
