@@ -152,7 +152,7 @@ def analyze_stock(symbol, session, config):
         if vol_avg == 0:
             return None
         vol_ratio = vol_today / vol_avg
-        if vol_ratio < config["min_volume_ratio"]:
+        if vol_ratio < 1.0:  # רק סינון בסיסי מאוד
             return None
 
         hist = ticker.history(period="200d")
@@ -161,8 +161,9 @@ def analyze_stock(symbol, session, config):
         closes = hist["Close"].tolist()
 
         rsi = calculate_rsi(closes[-30:])
-        if rsi is None or rsi < config["rsi_min"] or rsi > config["rsi_max"]:
+        if rsi is None:
             return None
+        # RSI affects score only, not a hard filter
 
         prev_close = info.get("previousClose", price)
         day_change_pct = ((price - prev_close) / prev_close * 100) if prev_close else 0
