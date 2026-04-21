@@ -230,7 +230,7 @@ def run_screener():
     return mag7_results, results[:CONFIG["max_results"]]
 
 def send_slack(mag7_results, stocks, scan_time):
-    webhook_url = "https://hooks.slack.com/services/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"
+    webhook_url = os.environ.get("SLACK_WEBHOOK")
     if not webhook_url:
         print("אין Webhook URL")
         for s in mag7_results + stocks:
