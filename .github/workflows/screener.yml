@@ -1,0 +1,17 @@
+name: Stock Screener
+on:
+  schedule:
+    - cron: '0 18 * * 1-5'
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install yfinance requests
+      - run: python screener.py
