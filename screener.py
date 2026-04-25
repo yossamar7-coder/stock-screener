@@ -36,22 +36,46 @@ WATCHLIST = [
     "PLTR", "SNOW", "DDOG", "MDB", "CRWD", "ZS", "OKTA", "PANW",
     "UBER", "LYFT", "ABNB", "DASH", "RBLX", "U", "TTWO",
     "ANET", "NET", "DKNG", "BILL", "GTLB", "PATH",
-    # Biotech
+    "NBIS", "CIFR", "BWXT", "QXO", "HP", "KEEL", "CHRD",
+    "SEDG", "CF", "PCAR",
+    # Biotech / Healthcare
     "MRNA", "BNTX", "NVAX", "RXRX", "ILMN", "PACB", "TDOC",
-    "EXAS", "BEAM", "EDIT", "CRSP",
-    # Fintech
+    "EXAS", "BEAM", "EDIT", "CRSP", "FATE", "NTLA", "SNDX",
+    "IMVT", "KROS", "GKOS", "PRCT", "CELH", "HIMS",
+    "ACAD", "ITCI", "INSM", "RCKT", "KRYS", "VRTX",
+    "ALNY", "IONS", "SRPT", "BMRN", "RARE", "FOLD",
+    # Fintech / Crypto
     "AFRM", "UPST", "NU", "HOOD", "COIN", "RIOT", "MARA",
-    "SOFI", "LC",
+    "SOFI", "LC", "OPEN", "TREE", "CLOV", "UWMC",
+    "MSTR", "CLSK", "IREN", "BTBT", "HUT", "CIFR",
     # EV / Clean Energy
     "RIVN", "LCID", "NIO", "LI", "XPEV", "CHPT", "BLNK", "PLUG",
-    "FCEL", "BE",
-    # Consumer / Social
+    "FCEL", "BE", "STEM", "SPWR", "RUN", "ARRY",
+    "CHPT", "EVGO", "BLNK", "LEV", "SOLO",
+    # Consumer / Social / E-commerce
     "CVNA", "CPNG", "W", "ETSY", "PINS", "SNAP", "RDDT",
-    # Space / Industrial
-    "RKLB", "ASTS", "LUNR", "JOBY", "ACHR",
-    # Growth / Other
-    "APP", "TTGT", "HIMS", "RXST", "MSTR", "IONQ",
-    "CELH", "IMVT", "KROS", "GKOS", "PRCT",
+    "WISH", "REAL", "RENT", "BARK", "MAPS",
+    "OPEN", "OPAD", "PTON", "NKLA", "GOEV",
+    # Space / Defense / Industrial
+    "RKLB", "ASTS", "LUNR", "JOBY", "ACHR", "SPCE",
+    "KTOS", "AVAV", "LOAR", "POWL", "AMSC",
+    # Energy / Commodities
+    "CF", "PCAR", "CHRD", "KEEL", "HP",
+    "SM", "CIVI", "MTDR", "ESTE", "REX",
+    "CLF", "STLD", "CMC", "ZEUS", "WIRE",
+    # Software / Cloud
+    "APP", "TTGT", "RXST", "IONQ",
+    "SMAR", "JAMF", "BRZE", "PCVX", "SEMR",
+    "DV", "IS", "ALTR", "TASK", "FRSH",
+    "MNDY", "ASAN", "BASE", "WEAV", "CFLT",
+    # Semiconductors extra
+    "WOLF", "AMBA", "AEHR", "CEVA", "ONTO",
+    "ACMR", "COHU", "ICHR", "KLIC", "MCHP",
+    # Growth misc
+    "RELY", "STEP", "HLNE", "TFIN", "CARG",
+    "SWTX", "RVNC", "TGTX", "ARDX", "APLS",
+    "NARI", "INSP", "SWAV", "NVST", "OMCL",
+    "AGIO", "PTGX", "VCEL", "HRMY", "CGEM",
 ]
 
 WATCHLIST = list(dict.fromkeys(WATCHLIST))
@@ -121,7 +145,6 @@ def analyze_stock(symbol, config):
         return None
 
 def run_screener():
-    # סריקת 7 המופלאים
     print(f"\n⭐ סורק 7 המופלאים...")
     mag7_results = []
     for sym in MAG7:
@@ -133,7 +156,6 @@ def run_screener():
         time.sleep(0.3)
     print(f"\n   נמצאו {len(mag7_results)} מופלאים עם סיגנל\n")
 
-    # סריקת הרשימה הרגילה
     print(f"\n🔍 מתחיל סריקה של {len(WATCHLIST)} מניות...")
     results = []
     for i, sym in enumerate(WATCHLIST):
